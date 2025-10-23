@@ -4,6 +4,7 @@
 2. [SMB](#smb)
 3. [SQL](#sql)
 4. [RDP](#rdp)
+5. [DNS](#dns)
 
 ### FTP
 #### Tools
@@ -185,3 +186,21 @@
     xfreerdp /v:10.129.79.70 /u:Administrator /pth:0E14B9D6330BF16C30B1924111104824
     ```
     The answer is `HTB{RDP_P4$$_Th3_H4$#}`.
+
+## DNS
+### Tools
+1. fierce
+2. subfinder 
+3. subbrute
+4. gobuster
+### Challenges
+1. Find all available DNS records for the "inlanefreight.htb" domain on the target name server and submit the flag found as a DNS record as the answer.
+
+    First, we need add `10.129.71.121 inlanefreight.htb` to the `/etc/hosts`. Then i used gobuster to bruteforce.
+
+    ```bash
+    gobuster dns -d inlanefreight.htb -w ./names.txt -r 10.129.71.121 -t 500
+    ```
+    ![alt text](Assets/DNS1.png)
+
+    Then we can try `dig AXFR @10.129.71.121 <gobuster result>`. The correct one is `hr.inlanefreight.htb`. So when we run dig on it, we get the flag. The answer is `HTB{LUIHNFAS2871SJK1259991}`.
