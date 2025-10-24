@@ -5,6 +5,7 @@
 3. [SQL](#sql)
 4. [RDP](#rdp)
 5. [DNS](#dns)
+6. [SMTP](#smtp)
 
 ### FTP
 #### Tools
@@ -204,3 +205,36 @@
     ![alt text](Assets/DNS1.png)
 
     Then we can try `dig AXFR @10.129.71.121 <gobuster result>`. The correct one is `hr.inlanefreight.htb`. So when we run dig on it, we get the flag. The answer is `HTB{LUIHNFAS2871SJK1259991}`.
+
+## SMTP
+### Tools
+1. smtp-user-enum
+### Challenges
+1. What is the available username for the domain inlanefreight.htb in the SMTP server?
+
+    To find valid user, we can use `smtp-user-enum`.
+
+    ```bash
+    smtp-user-enum -M RCPT -U users.list -D inlanefreight.htb -t 10.129.190.116
+    ```
+
+    ![alt text](Assets/SMTP1.png)
+
+    The answer is `marlin`.
+
+2. Access the email account using the user credentials that you discovered and submit the flag in the email as your answer.
+
+    After we have valid username, `marlin@inlanefreight.htb`, we can use hydra to find the password.
+
+    ```bash
+    hydra -l marlin@inlanefreight.htb -P pws.list 10.129.190.116 pop3
+    ```
+    The password is `poohbear`. Then we can use telnet to get the flag.
+
+    ```bash
+    telnet 10.129.190.116 110
+    ```
+
+    ![alt text](Assets/SMTP2.png)
+
+    The answer is `HTB{w34k_p4$$w0rd}`.
